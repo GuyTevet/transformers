@@ -229,10 +229,11 @@ def main():
 
     # Batch size == 1. to add more examples please use num_return_sequences > 1
     for sample_i in range(batch_size):
-        generated_sequence = output_sequences[0, i].tolist()
+        generated_sequence = output_sequences[0, sample_i].tolist()
         text = tokenizer.decode(generated_sequence, clean_up_tokenization_spaces=True)
         text = text[: text.find(args.stop_token) if args.stop_token else None]
-        print(text)
+        print(text + '======\n')
+
 
     return text
 
