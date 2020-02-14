@@ -24,6 +24,8 @@ import logging
 import numpy as np
 import torch
 
+from tqdm import tqdm
+
 from transformers import (
     CTRLLMHeadModel,
     CTRLTokenizer,
@@ -144,6 +146,38 @@ def adjust_length_to_model(length, max_sequence_length):
         length = MAX_LENGTH  # avoid infinite loop
     return length
 
+def generate(prompt_text, model, tokenizer, args):
+
+    # Different models need different input formatting and/or extra arguments
+    requires_preprocessing = args.model_type in PREPROCESSING_FUNCTIONS.keys()
+    if requires_preprocessing:
+        prepare_input = PREPROCESSING_FUNCTIONS.get(args.model_type)
+        prompt_text = prepare_input(args, model, tokenizer, prompt_text)
+    encoded_prompt = tokenizer.encode(prompt_text, add_special_tokens=False, return_tensors="pt")
+    encoded_prompt = encoded_prompt.to(args.device)
+
+    output_sequences = model.generate(
+        input_ids=encoded_prompt,
+        max_length=args.length,
+        temperature=args.temperature,
+        top_k=args.k,
+        top_p=args.p,
+        repetition_penalty=args.repetition_penalty,
+        do_sample=True,
+        num_return_sequences=args.samples_per_prompt,
+    )
+
+    text_list = []
+
+    # Batch size == 1. to add more examples please use num_return_sequences > 1
+    for sample_i in range(args.samples_per_prompt):
+        generated_sequence = output_sequences[0, sample_i].tolist()
+        text = tokenizer.decode(generated_sequence, clean_up_tokenization_spaces=True)
+        text = text[: text.find(args.stop_token) if args.stop_token else None]
+        text_list.append(text)
+        print(text + '\n======\n')
+
+    return text_list
 
 def main():
     parser = argparse.ArgumentParser()
@@ -163,7 +197,11 @@ def main():
     )
 
     parser.add_argument("--prompt", type=str, default="")
+    parser.add_argument("--prompts_path", type=str, default="")
+    parser.add_argument("--num_prompts_from_file", type=int, default=1000)
+    parser.add_argument("--output_path", type=str, default="")
     parser.add_argument("--length", type=int, default=20)
+    parser.add_argument("--samples_per_prompt", type=int, default=10)
     parser.add_argument("--stop_token", type=str, default=None, help="Token at which text generation is stopped")
 
     parser.add_argument(
@@ -204,39 +242,16 @@ def main():
     args.length = adjust_length_to_model(args.length, max_sequence_length=model.config.max_position_embeddings)
     logger.info(args)
 
-    prompt_text = args.prompt if args.prompt else input("Model prompt >>> ")
-
-    # Different models need different input formatting and/or extra arguments
-    requires_preprocessing = args.model_type in PREPROCESSING_FUNCTIONS.keys()
-    if requires_preprocessing:
-        prepare_input = PREPROCESSING_FUNCTIONS.get(args.model_type)
-        prompt_text = prepare_input(args, model, tokenizer, prompt_text)
-    encoded_prompt = tokenizer.encode(prompt_text, add_special_tokens=False, return_tensors="pt")
-    encoded_prompt = encoded_prompt.to(args.device)
-
-    batch_size = 32
-
-    output_sequences = model.generate(
-        input_ids=encoded_prompt,
-        max_length=args.length,
-        temperature=args.temperature,
-        top_k=args.k,
-        top_p=args.p,
-        repetition_penalty=args.repetition_penalty,
-        do_sample=True,
-        num_return_sequences=batch_size,
-    )
-
-    # Batch size == 1. to add more examples please use num_return_sequences > 1
-    for sample_i in range(batch_size):
-        generated_sequence = output_sequences[0, sample_i].tolist()
-        text = tokenizer.decode(generated_sequence, clean_up_tokenization_spaces=True)
-        text = text[: text.find(args.stop_token) if args.stop_token else None]
-        print(text + '\n======\n')
-
-
-    return text
-
+    if args.prompts_path != '':
+        f_in = open(args.prompts_path, 'r')
+        f_out = open(args.output_path, 'w')
+        for prompt_i in tqdm(range(args.num_prompts_from_file)):
+            line = f_in.readline().replace('\n', '')
+            gen_list = generate(line, model, tokenizer, args)
+            f_out.write('\n'.join(gen_list) + '\n')
+    else:
+        gen_list = generate(args.prompt, model, tokenizer, args)
+        return gen_list
 
 if __name__ == "__main__":
     main()
