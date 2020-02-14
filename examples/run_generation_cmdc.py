@@ -248,7 +248,7 @@ def main():
         for _ in tqdm(range(args.num_prompts_from_file)):
             line = f_in.readline().replace('\n', '')
             gen_list = generate(line, model, tokenizer, args)
-            gen_list = [g.replace('\n', ' ') for g in gen_list] # edit
+            gen_list = [g.replace('\n', ' ').replace(line, '', count=1) for g in gen_list] # edit + lose prompt
             f_out.write('\n'.join(gen_list) + '\n')
     else:
         gen_list = generate(args.prompt, model, tokenizer, args)
