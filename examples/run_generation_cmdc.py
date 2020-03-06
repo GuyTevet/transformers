@@ -221,6 +221,10 @@ def main():
     parser.add_argument("--no_cuda", action="store_true", help="Avoid using CUDA when available")
     args = parser.parse_args()
 
+    print('*^*^*^ P = {} *^*^*^'.format(args.p))
+    print('*^*^*^ K = {} *^*^*^'.format(args.k))
+    print('*^*^*^ TEMP = {} *^*^*^'.format(args.temperature))
+
     args.device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
     args.n_gpu = torch.cuda.device_count()
 
