@@ -16,8 +16,6 @@
 # limitations under the License.
 """ Conditional text generation with the auto-regressive models of the library (GPT/GPT-2/CTRL/Transformer-XL/XLNet)
 """
-
-
 import argparse
 import logging
 
@@ -244,12 +242,12 @@ def main():
 
     if args.prompts_path != '':
         f_in = open(args.prompts_path, 'r')
-        f_out = open(args.output_path, 'w')
+        f_out = open(args.output_path, 'wb')
         for _ in tqdm(range(args.num_prompts_from_file)):
             line = f_in.readline().replace('\n', '')
             gen_list = generate(line, model, tokenizer, args)
             gen_list = [g.replace('\n', ' ').replace(line, '', 1) for g in gen_list] # edit + lose prompt
-            f_out.write('\n'.join(gen_list) + '\n')
+            f_out.write(str('\n'.join(gen_list) + '\n').encode("utf-8", errors="ignore"))
     else:
         gen_list = generate(args.prompt, model, tokenizer, args)
         return gen_list
