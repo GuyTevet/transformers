@@ -212,7 +212,7 @@ def main():
         "--repetition_penalty", type=float, default=1.0, help="primarily useful for CTRL model; in that case, use 1.2"
     )
     parser.add_argument("--k", type=int, default=0)
-    parser.add_argument("--p", type=float, default=0.9)
+    parser.add_argument("--p", type=float, default=1.0)
 
     parser.add_argument("--padding_text", type=str, default="", help="Padding text for Transfo-XL and XLNet.")
     parser.add_argument("--xlm_language", type=str, default="", help="Optional language when used with the XLM model.")
